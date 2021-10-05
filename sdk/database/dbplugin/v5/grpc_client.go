@@ -18,8 +18,13 @@ var (
 )
 
 type gRPCClient struct {
-	client  proto.DatabaseClient
-	doneCtx context.Context
+	client              proto.DatabaseClient
+	doneCtx             context.Context
+	multiplexingSupport bool
+}
+
+func (c gRPCClient) MultiplexingSupport() bool {
+	return c.multiplexingSupport
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {

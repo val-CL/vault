@@ -111,8 +111,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			"root_rotation_statements": {
 				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed
-				to rotate the root user's credentials. See the plugin's API 
-				page for more information on support and formatting for this 
+				to rotate the root user's credentials. See the plugin's API
+				page for more information on support and formatting for this
 				parameter.`,
 			},
 			"password_policy": {
@@ -325,7 +325,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		initResp, err := dbw.Initialize(ctx, initReq)
 		if err != nil {
 			dbw.Close()
-			return logical.ErrorResponse("error creating database object: %s", err), nil
+			return logical.ErrorResponse("error initializing database object: %s", err), nil
 		}
 		config.ConnectionDetails = initResp.Config
 
@@ -390,7 +390,7 @@ const pathConfigConnectionHelpDesc = `
 This path configures the connection details used to connect to a particular
 database. This path runs the provided plugin name and passes the configured
 connection details to the plugin. See the documentation for the plugin specified
-for a full list of accepted connection details. 
+for a full list of accepted connection details.
 
 In addition to the database specific connection details, this endpoint also
 accepts:

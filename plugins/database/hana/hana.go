@@ -28,7 +28,7 @@ type HANA struct {
 var _ dbplugin.Database = (*HANA)(nil)
 
 // New implements builtinplugins.BuiltinFactory
-func New() (interface{}, error) {
+func New() (dbplugin.Database, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)

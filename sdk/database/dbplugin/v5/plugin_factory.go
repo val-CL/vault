@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
@@ -57,6 +58,11 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	typeStr, err := db.Type()
 	if err != nil {
+		// JASON TODO: Hack, we need to clean up properly and not through this error
+		if errors.Is(err, ErrPluginShutdown) {
+			delete(multiplexedClients, pluginRunner.Name)
+		}
+
 		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 	}
 
