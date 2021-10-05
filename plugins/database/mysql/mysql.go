@@ -16,7 +16,7 @@ import (
 
 const (
 	defaultMysqlRevocationStmts = `
-		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%';
 		DROP USER '{{name}}'@'%'
 	`
 
@@ -40,8 +40,8 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(defaultUsernameTemplate string) func() (interface{}, error) {
-	return func() (interface{}, error) {
+func New(defaultUsernameTemplate string) func() (dbplugin.Database, error) {
+	return func() (dbplugin.Database, error) {
 		if defaultUsernameTemplate == "" {
 			return nil, fmt.Errorf("missing default username template")
 		}

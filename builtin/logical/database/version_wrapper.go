@@ -31,6 +31,11 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 		return dbw, nil
 	}
 
+	// TODO: Remove this once multiplexing is proven to work
+	if err != nil {
+		return dbw, err
+	}
+
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 

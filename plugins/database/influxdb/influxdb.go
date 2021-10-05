@@ -32,7 +32,7 @@ type Influxdb struct {
 }
 
 // New returns a new Cassandra instance
-func New() (interface{}, error) {
+func New() (dbplugin.Database, error) {
 	db := new()
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 

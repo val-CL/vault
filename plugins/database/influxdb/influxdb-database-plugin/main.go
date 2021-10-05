@@ -18,12 +18,10 @@ func main() {
 
 // Run instantiates a Influxdb object, and runs the RPC server for the plugin
 func Run() error {
-	dbType, err := influxdb.New()
-	if err != nil {
-		return err
-	}
+	var f func() (dbplugin.Database, error)
+	f = influxdb.New()
 
-	dbplugin.Serve(dbType.(dbplugin.Database))
+	dbplugin.ServeMultiplex(f)
 
 	return nil
 }

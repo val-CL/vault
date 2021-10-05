@@ -18,12 +18,10 @@ func main() {
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin
 func Run() error {
-	dbType, err := mongodb.New()
-	if err != nil {
-		return err
-	}
+	var f func() (dbplugin.Database, error)
+	f = mongodb.New()
 
-	dbplugin.Serve(dbType.(dbplugin.Database))
+	dbplugin.ServeMultiplex(f)
 
 	return nil
 }

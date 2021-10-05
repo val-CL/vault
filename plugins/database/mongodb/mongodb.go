@@ -34,7 +34,7 @@ type MongoDB struct {
 var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
-func New() (interface{}, error) {
+func New() (dbplugin.Database, error) {
 	db := new()
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil

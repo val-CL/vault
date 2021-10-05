@@ -78,7 +78,7 @@ func TestGRPCServer_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
@@ -253,7 +253,7 @@ func TestGRPCServer_NewUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
@@ -363,7 +363,7 @@ func TestGRPCServer_UpdateUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
@@ -431,7 +431,7 @@ func TestGRPCServer_DeleteUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
@@ -489,7 +489,7 @@ func TestGRPCServer_Type(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
@@ -540,7 +540,7 @@ func TestGRPCServer_Close(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			g := gRPCServer{
-				impl: test.db,
+				singleImpl: test.db,
 			}
 
 			// Context doesn't need to timeout since this is just passed through
