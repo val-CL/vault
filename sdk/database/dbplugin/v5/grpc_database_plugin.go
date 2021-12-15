@@ -20,6 +20,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 
 const multiplexingCtxKey string = "multiplex_id"
 
+// Factory is the factory function to create a dbplugin Database.
 type Factory func() (Database, error)
 
 type GRPCDatabasePlugin struct {

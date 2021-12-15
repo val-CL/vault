@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-// TODO: storing these plugins should probably live in core. This is currently
+// TODO(JM): storing these plugins should probably live in core. This is currently
 //       not thread-safe.
 var multiplexedClients map[string]*MultiplexedClient
 
@@ -37,7 +37,7 @@ type DatabasePluginClient struct {
 func (dc *DatabasePluginClient) Close() error {
 	err := dc.Database.Close()
 
-	// TODO: This leaves child process behind after vault exits
+	// TODO(JM): This leaves child process behind after vault exits
 	if !dc.multiplexing {
 		dc.client.Kill()
 	} else {
@@ -64,7 +64,7 @@ type MultiplexedClient struct {
 	client     *plugin.Client
 	gRPCClient gRPCClient
 
-	// TODO: Note, this could be used as a counter only
+	// TODO(JM): Note, this could be used as a counter only
 	connections map[string]Database
 }
 
@@ -72,13 +72,12 @@ func (mpc MultiplexedClient) DispensePlugin(id string) (Database, error) {
 	mpc.Lock()
 	defer mpc.Unlock()
 
-	// Wrap clientConn with our implementation and get rid of middleware
-	// and then cast it back and return it
-
 	if mpc.clientConn == nil {
 		return nil, errors.New("nil clientConn on MultiplexedClient")
 	}
 
+	// Wrap clientConn with our implementation and get rid of middleware
+	// and then cast it back and return it
 	cc := &databaseClientConn{
 		ClientConn: mpc.clientConn,
 		id:         id,
@@ -86,13 +85,10 @@ func (mpc MultiplexedClient) DispensePlugin(id string) (Database, error) {
 
 	mpc.gRPCClient.client = proto.NewDatabaseClient(cc)
 
-	// TODO: This may not be needed
+	// TODO(JM): This may not be needed
 	mpc.connections[id] = mpc.gRPCClient
 
 	return mpc.gRPCClient, nil
-
-	// db := NewDatabaseMultiplexingMiddleware(mpc.gRPCClient, id)
-
 }
 
 // NewPluginClient returns a databaseRPCClient with a connection to a running
@@ -113,7 +109,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		}
 
 		return &DatabasePluginClient{
-			// TODO: we probably want to wrap client instead of providing the root
+			// TODO(JM): we probably want to wrap client instead of providing the root
 			//       go-plugin value.
 			multiplexing: true,
 			client:       mpc.client,
@@ -169,7 +165,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		// Case where the multiplexed client doesn't exist and we need to create
 		// an entry on the map.
 		//
-		// TODO: this should probably live in Core instead?
+		// TODO(JM): this should probably live in Core instead?
 		if gRPCClient.MultiplexingSupport() {
 			mpc := &MultiplexedClient{
 				client:      client,

@@ -18,7 +18,7 @@ var _ proto.DatabaseServer = gRPCServer{}
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
 
-	// TODO: this fits in the map too
+	// TODO(JM): this fits in the map too
 	singleImpl Database
 
 	factoryFunc func() (Database, error)

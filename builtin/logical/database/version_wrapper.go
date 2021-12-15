@@ -20,8 +20,9 @@ type databaseVersionWrapper struct {
 	v5 v5.Database
 }
 
-// newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
-// that can be used to make operations on the underlying database plugin.
+// newDatabaseWrapper figures out which version of the database the pluginName
+// is referring to and returns a wrapper object that can be used to make
+// operations on the underlying database plugin.
 func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
 	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
 	if err == nil {
@@ -31,7 +32,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 		return dbw, nil
 	}
 
-	// TODO: Remove this once multiplexing is proven to work
+	// TODO(JM): Remove this once multiplexing is proven to work
 	if err != nil {
 		return dbw, err
 	}
