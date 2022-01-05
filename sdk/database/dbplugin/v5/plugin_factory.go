@@ -42,7 +42,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = NewPluginClient(ctx, sys, pluginRunner, namedLogger, false)
+		db, err = pluginRunner.NewPluginClient(ctx, pluginRunner, namedLogger, false)
 		if err != nil {
 			return nil, err
 		}

@@ -44,6 +44,15 @@ type PluginRunner struct {
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
+type PluginClient interface {
+	Close()
+	Dispense()
+}
+
+type Plugin interface {
+	Client() PluginClient
+}
+
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
