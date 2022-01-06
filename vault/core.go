@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -581,6 +582,14 @@ type Core struct {
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
 	versionTimestamps map[string]time.Time
+
+	multiplexedClients map[string]*MultiplexedClient
+}
+
+type MultiplexedClient struct {
+	sync.Mutex
+
+	connections map[string]v5.Database
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -2045,7 +2054,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 	if err := c.setupManagedKeyRegistry(); err != nil {
 		return err
-	  }
+	}
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
@@ -3041,7 +3050,7 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 
 	// there is only one writer to this map, so skip checking for errors
 	reqData := v.(InFlightReqData)
-	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(logLevel, "completed_request", "client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsLevel() {
