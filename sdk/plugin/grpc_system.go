@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -97,6 +98,10 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	}
 
 	return info, nil
+}
+
+func (s *gRPCSystemViewClient) GetPluginClient(ctx context.Context, client *plugin.Client) (pluginutil.PluginClient, error) {
+	return nil, errors.New("GetPluginClient is not implemented in gRPCSystemViewClient")
 }
 
 func (s *gRPCSystemViewClient) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {

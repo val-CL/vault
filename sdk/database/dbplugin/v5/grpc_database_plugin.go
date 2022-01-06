@@ -23,6 +23,8 @@ type GRPCDatabasePlugin struct {
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
+
+	multiplexingSupport bool
 }
 
 var (

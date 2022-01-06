@@ -21,14 +21,21 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
+	GetPluginClient(ctx context.Context, client *plugin.Client) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
 
-// LookRunnerUtil defines the functions for both Looker and Wrapper
+// LookRunnerUtil defines the functions for both Looker and RunnerUtil
 type LookRunnerUtil interface {
 	Looker
 	RunnerUtil
+}
+
+type PluginClient interface {
+	Close() error
+	Dispense(string) (interface{}, error)
+	Ping() error
 }
 
 // PluginRunner defines the metadata needed to run a plugin securely with

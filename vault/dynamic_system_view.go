@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -368,4 +369,15 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	}
 
 	return passPolicy.Generate(ctx, nil)
+}
+
+func (d dynamicSystemView) GetPluginClient(ctx context.Context, client *plugin.Client) (pluginutil.PluginClient, error) {
+	// Connect via RPC
+	// this implements Close(), Dispense() and Ping()
+	rpcClient, err := client.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	return rpcClient, nil
 }
