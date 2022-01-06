@@ -12,6 +12,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -36,7 +38,19 @@ type PluginCatalog struct {
 	catalogView     *BarrierView
 	directory       string
 
+	multiplexedClients map[string]*MultiplexedClient
+
 	lock sync.RWMutex
+}
+
+type MultiplexedClient struct {
+	sync.Mutex
+
+	connections map[string]pluginutil.PluginClient
+}
+
+type Multiplexer interface {
+	MultiplexingSupport() bool
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -57,6 +71,52 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// handshakeConfigs are used to just do a basic handshake between
+// a plugin and host. If the handshake fails, a user friendly error is shown.
+// This prevents users from executing bad plugins or executing a plugin
+// directory. It is a UX feature, not a security feature.
+var handshakeConfig = plugin.HandshakeConfig{
+	ProtocolVersion:  5,
+	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
+	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
+}
+
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+	// TODO(JM): Case where multiplexed client exists, but we need to create a new entry
+	// for the connection
+
+	// pluginSets is the map of plugins we can dispense.
+	// TODO(JM): add multiplexingSupport
+	pluginSets := map[int]plugin.PluginSet{
+		5: {
+			"database": new(dbplugin.GRPCDatabasePlugin),
+		},
+	}
+
+	// TODO(JM): pass sys instead of nil?
+	gpClient, err := pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(nil),
+		pluginutil.PluginSets(pluginSets),
+		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.Logger(logger),
+		pluginutil.MetadataMode(isMetadataMode),
+		pluginutil.AutoMTLS(true),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := gpClient.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(JM): Case where the multiplexed client doesn't exist and we need to create
+	// an entry on the map.
+
+	return client, nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
