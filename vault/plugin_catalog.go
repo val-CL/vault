@@ -77,16 +77,6 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
-// handshakeConfigs are used to just do a basic handshake between
-// a plugin and host. If the handshake fails, a user friendly error is shown.
-// This prevents users from executing bad plugins or executing a plugin
-// directory. It is a UX feature, not a security feature.
-var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  5,
-	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
-	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
-}
-
 func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, sys pluginutil.RunnerUtil) (plugin.ClientProtocol, error) {
 	id, err := base62.Random(10)
 	if err != nil {
@@ -101,7 +91,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 	client, err := pluginRunner.RunConfig(ctx,
 		pluginutil.Runner(sys),
 		pluginutil.PluginSets(v5.PluginSets),
-		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.HandshakeConfig(v5.HandshakeConfig),
 		pluginutil.Logger(logger),
 		pluginutil.MetadataMode(isMetadataMode),
 		pluginutil.AutoMTLS(true),
