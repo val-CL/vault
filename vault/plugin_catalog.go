@@ -77,7 +77,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool, sys pluginutil.RunnerUtil) (plugin.ClientProtocol, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true, nil)
+	v5Client, err := c.getPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()
