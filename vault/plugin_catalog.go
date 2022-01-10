@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -86,7 +85,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -111,7 +110,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		pluginutil.PluginSets(pluginSets),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
-		pluginutil.MetadataMode(false), // TODO(JM): can we just omit this?
+		pluginutil.MetadataMode(isMetadataMode),
 		pluginutil.AutoMTLS(true),
 	)
 	if err != nil {
@@ -148,7 +147,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
-	err := isDatabasePlugin(ctx, plugin)
+	err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
 		return consts.PluginTypeDatabase, nil
 	}
@@ -189,10 +188,11 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	return consts.PluginTypeUnknown, nil
 }
 
-func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, err := v5.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	// TODO(JM): pass in sys?
+	v5Client, err := c.getPluginClient(ctx, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()

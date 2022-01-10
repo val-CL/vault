@@ -57,7 +57,7 @@ type SystemView interface {
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
 
-	NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error)
+	NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -155,7 +155,7 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error) {
+func (d StaticSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
 	return nil, errors.New("NewPluginClient is not implemented in StaticSystemView")
 }
 
