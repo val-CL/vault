@@ -7,7 +7,6 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
@@ -24,7 +23,7 @@ type DatabasePluginClient struct {
 // TODO(JM): add multiplexingSupport
 var PluginSets = map[int]plugin.PluginSet{
 	5: {
-		"database": new(dbplugin.GRPCDatabasePlugin),
+		"database": new(GRPCDatabasePlugin),
 	},
 }
 
