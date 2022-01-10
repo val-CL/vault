@@ -83,7 +83,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error) {
 	// TODO(JM): Case where multiplexed client exists, but we need to create a new entry
 	// for the connection
 
@@ -101,7 +101,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		pluginutil.PluginSets(pluginSets),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
-		pluginutil.MetadataMode(isMetadataMode),
+		pluginutil.MetadataMode(false),
 		pluginutil.AutoMTLS(true),
 	)
 	if err != nil {

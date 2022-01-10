@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -213,6 +214,14 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	}
 
 	return resp.WrapInfo, nil
+}
+
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error) {
+	c, err := d.core.pluginCatalog.getPluginClient(ctx, pluginRunner, logger)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
