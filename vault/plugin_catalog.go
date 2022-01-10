@@ -48,7 +48,7 @@ type MultiplexedClient struct {
 
 	client *plugin.Client
 
-	connections map[string]pluginutil.PluginClient
+	connections map[string]plugin.ClientProtocol
 }
 
 type Multiplexer interface {
@@ -85,7 +85,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (pluginutil.PluginClient, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, error) {
 	id, err := base62.Random(10)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 	// create an entry on the map.
 	mpc := &MultiplexedClient{
 		client:      gpClient,
-		connections: make(map[string]pluginutil.PluginClient),
+		connections: make(map[string]plugin.ClientProtocol),
 	}
 	// TODO(JM): gRPClient?
 
