@@ -12,7 +12,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -45,6 +46,8 @@ type PluginCatalog struct {
 
 type MultiplexedClient struct {
 	sync.Mutex
+
+	client *plugin.Client
 
 	connections map[string]pluginutil.PluginClient
 }
@@ -84,8 +87,15 @@ var handshakeConfig = plugin.HandshakeConfig{
 }
 
 func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (pluginutil.PluginClient, error) {
-	// TODO(JM): Case where multiplexed client exists, but we need to create a new entry
-	// for the connection
+	id, err := base62.Random(10)
+	if err != nil {
+		return nil, err
+	}
+	// Case where multiplexed client exists, but we need to create a
+	// new entry for the connection
+	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
+		return mpc.connections[id], nil
+	}
 
 	// pluginSets is the map of plugins we can dispense.
 	// TODO(JM): add multiplexingSupport
@@ -101,22 +111,36 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		pluginutil.PluginSets(pluginSets),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
-		pluginutil.MetadataMode(false),
+		pluginutil.MetadataMode(false), // TODO(JM): can we just omit this?
 		pluginutil.AutoMTLS(true),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := gpClient.Client()
-	if err != nil {
-		return nil, err
+	// client, err := gpClient.Client()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
+	// create an entry on the map.
+	mpc := &MultiplexedClient{
+		client:      gpClient,
+		connections: make(map[string]pluginutil.PluginClient),
+	}
+	// TODO(JM): gRPClient?
+
+	if c.multiplexedClients == nil {
+		c.multiplexedClients = make(map[string]*MultiplexedClient)
 	}
 
-	// TODO(JM): Case where the multiplexed client doesn't exist and we need to create
-	// an entry on the map.
+	c.multiplexedClients[pluginRunner.Name] = mpc
 
-	return client, nil
+	// TODO(JM): mpc.DispensePlugin()?
+	// get us a Database plugin?
+
+	return mpc.connections[id], nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the

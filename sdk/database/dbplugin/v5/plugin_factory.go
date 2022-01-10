@@ -45,7 +45,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		if err != nil {
 			return nil, err
 		}
-		c, err := sys.NewPluginClient(ctx, pluginRunner, logger)
+		c, err := sys.NewPluginClient(ctx, pluginRunner, namedLogger)
 		if err != nil {
 			return nil, err
 		}
