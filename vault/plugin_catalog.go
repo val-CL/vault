@@ -14,8 +14,8 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -98,17 +98,9 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, pluginRunner *plugi
 		return mpc.connections[id], nil
 	}
 
-	// pluginSets is the map of plugins we can dispense.
-	// TODO(JM): add multiplexingSupport
-	pluginSets := map[int]plugin.PluginSet{
-		5: {
-			"database": new(dbplugin.GRPCDatabasePlugin),
-		},
-	}
-
 	client, err := pluginRunner.RunConfig(ctx,
 		pluginutil.Runner(sys),
-		pluginutil.PluginSets(pluginSets),
+		pluginutil.PluginSets(v5.PluginSets),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Logger(logger),
 		pluginutil.MetadataMode(isMetadataMode),

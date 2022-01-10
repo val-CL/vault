@@ -7,6 +7,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
@@ -17,6 +18,14 @@ type DatabasePluginClient struct {
 	sync.Mutex
 
 	Database
+}
+
+// pluginSets is the map of plugins we can dispense.
+// TODO(JM): add multiplexingSupport
+var PluginSets = map[int]plugin.PluginSet{
+	5: {
+		"database": new(dbplugin.GRPCDatabasePlugin),
+	},
 }
 
 // This wraps the Close call and ensures we both close the database connection
