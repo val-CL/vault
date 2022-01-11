@@ -60,6 +60,7 @@ type MultiplexedClient struct {
 	connections map[string]plugin.ClientProtocol
 }
 
+// TODO(JM): should dbplugin.GRPCDatabasePlugin implement this?
 type Multiplexer interface {
 	MultiplexingSupport() bool
 }
@@ -102,13 +103,6 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	if err != nil {
 		return nil, "", err
 	}
-	// Case where multiplexed client exists, but we need to create a
-	// new entry for the connection
-	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
-		logger.Debug("muxed client exists", "id", id)
-		return mpc.connections[id], id, nil
-	}
-	logger.Debug("muxed client does not exist", "id", id)
 
 	client, err := pluginRunner.RunConfig(ctx,
 		pluginutil.Runner(sys),
@@ -126,6 +120,15 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	if err != nil {
 		return nil, "", err
 	}
+
+	// Case where multiplexed client exists, but we need to create a
+	// new entry for the connection
+	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
+		logger.Debug("muxed client exists", "id", id)
+		mpc.connections[id] = rpcClient
+		return mpc.connections[id], id, nil
+	}
+	logger.Debug("muxed client does not exist", "id", id)
 
 	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
 	// create an entry on the map.
