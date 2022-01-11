@@ -31,7 +31,7 @@ var PluginSets = map[int]plugin.PluginSet{
 // and kill the plugin.
 func (dc *DatabasePluginClient) Close() error {
 	err := dc.Database.Close()
-	dc.client.Kill()
+	// dc.client.Kill() // TODO(JM): can we do this in PluginCatalog?
 
 	return err
 }

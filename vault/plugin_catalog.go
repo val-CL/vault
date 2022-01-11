@@ -89,6 +89,7 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 		return
 	}
 
+	c.multiplexedClients[name].client.Kill() // TODO(JM): remove this in dbplugin?
 	delete(c.multiplexedClients[name].connections, id)
 	if len(c.multiplexedClients[name].connections) == 0 {
 		delete(c.multiplexedClients, name)
