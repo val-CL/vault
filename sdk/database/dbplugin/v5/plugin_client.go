@@ -64,5 +64,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		Database: db,
+		// client:   client, // TODO(JM): need to set a client so we can call Kill()
 	}, nil
 }
