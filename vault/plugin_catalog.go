@@ -90,7 +90,7 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 		return
 	}
 
-	c.multiplexedClients[name].client.Kill() // TODO(JM): remove this in dbplugin?
+	c.multiplexedClients[name].client.Kill()
 	delete(c.multiplexedClients[name].connections, id)
 	if len(c.multiplexedClients[name].connections) == 0 {
 		delete(c.multiplexedClients, name)
@@ -125,12 +125,15 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 	// new entry for the connection
 	if mpc, ok := c.multiplexedClients[pluginRunner.Name]; ok {
 		logger.Debug("muxed client exists", "id", id)
+
+		// set the ClientProtocol connection for the given ID
 		mpc.connections[id] = rpcClient
+
 		return mpc.connections[id], id, nil
 	}
 	logger.Debug("muxed client does not exist", "id", id)
 
-	// TODO(JM): Case where the multiplexed client doesn't exist and we need to
+	// Case where the multiplexed client doesn't exist and we need to
 	// create an entry on the map.
 	mpc := &MultiplexedClient{
 		client:      client,
