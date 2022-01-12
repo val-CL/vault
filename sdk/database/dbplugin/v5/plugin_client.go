@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-// DatabasePluginClient embeds a databasePluginRPCClient and wraps it's Close
-// method
 type DatabasePluginClient struct {
 	id string
 	sync.Mutex
@@ -28,8 +26,7 @@ var PluginSets = map[int]plugin.PluginSet{
 }
 
 // NewPluginClient returns a databaseRPCClient with a connection to a running
-// plugin. The client is wrapped in a DatabasePluginClient object to ensure the
-// plugin is killed on call of Close().
+// plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
 	rpcClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
