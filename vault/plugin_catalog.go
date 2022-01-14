@@ -40,7 +40,8 @@ type PluginCatalog struct {
 	directory       string
 	logger          log.Logger
 
-	// multiplexedClients holds plugin processes by plugin name
+	// multiplexedClients holds plugin process connections by plugin name
+	//
 	// This allows a single grpc connection to communicate with multiple
 	// databases. Each database configuration using the same plugin will be
 	// routed to the existing plugin process.
@@ -50,7 +51,16 @@ type PluginCatalog struct {
 }
 
 type MultiplexedClient struct {
+	logger log.Logger
 	sync.Mutex
+
+	// id is the ID for this grpc connection
+	id string
+	// connectionCount is the number of databases associated with this connection
+	connectionCount int
+	// name is the plugin name
+	name     string
+	protocol plugin.ClientProtocol
 
 	// clientConn represents a virtual connection to a conceptual endpoint, to
 	// perform RPCs
@@ -61,12 +71,48 @@ type MultiplexedClient struct {
 	client *plugin.Client
 
 	// connections holds the database connections by ID.
-	connections map[string]plugin.ClientProtocol
+	// TODO(JM): can the ID and ClientProtocol be set directly on MultiplexedClient?
+	// connections map[string]plugin.ClientProtocol
 }
 
-// TODO(JM): should dbplugin.GRPCDatabasePlugin implement this?
-type Multiplexer interface {
-	MultiplexingSupport() bool
+func (m *MultiplexedClient) MultiplexingSupport() bool {
+	return true
+}
+
+func (m *MultiplexedClient) ID() string {
+	return m.id
+}
+
+func (m *MultiplexedClient) Close() error {
+	m.connectionCount -= 1
+	m.logger.Debug("deleted multiplexedClients connection entry")
+
+	if m.connectionCount == 0 {
+		// TODO(JM): This leaves child process behind after vault exits
+		m.client.Kill()
+		m.logger.Debug("killed plugin process", "id", m.id, "name", m.name)
+	}
+	err := m.protocol.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MultiplexedClient) Dispense(name string) (interface{}, error) {
+	pluginInstance, err := m.protocol.Dispense(name)
+	if err != nil {
+		return nil, err
+	}
+	return pluginInstance, nil
+}
+
+func (m *MultiplexedClient) Ping() error {
+	err := m.protocol.Ping()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
@@ -95,10 +141,10 @@ func (c *PluginCatalog) removeMultiplexedClient(ctx context.Context, name, id st
 		return
 	}
 
-	delete(c.multiplexedClients[name].connections, id)
+	c.multiplexedClients[name].connectionCount -= 1
 	c.logger.Debug("deleted multiplexedClients connection entry", "id", id)
 
-	if len(c.multiplexedClients[name].connections) == 0 {
+	if c.multiplexedClients[name].connectionCount == 0 {
 		// TODO(JM): This leaves child process behind after vault exits
 		c.multiplexedClients[name].client.Kill()
 		delete(c.multiplexedClients, name)
@@ -124,9 +170,7 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 		c.logger.Debug("created multiplexedClients map")
 	}
 
-	mpc := &MultiplexedClient{
-		connections: make(map[string]plugin.ClientProtocol),
-	}
+	mpc := &MultiplexedClient{logger: c.logger}
 
 	// set the MultiplexedClient for the given plugin name
 	c.multiplexedClients[pluginName] = mpc
@@ -138,13 +182,8 @@ func (c *PluginCatalog) newMultiplexedClient(pluginName string) *MultiplexedClie
 // getPluginClient returns a client for managing the lifecycle of a plugin
 // process and an ID for a newly created entry in the MultiplexedClients'
 // connections map.
-func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (plugin.ClientProtocol, string, error) {
+func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, namedLogger log.Logger, isMetadataMode bool) (*MultiplexedClient, error) {
 	c.logger.Debug("begin PluginCatalog.getPluginClient")
-	id, err := base62.Random(10)
-	if err != nil {
-		return nil, "", err
-	}
-
 	mpc := c.getMultiplexedClient(pluginRunner.Name)
 
 	if mpc.client == nil {
@@ -158,24 +197,32 @@ func (c *PluginCatalog) getPluginClient(ctx context.Context, sys pluginutil.Runn
 			pluginutil.AutoMTLS(true),
 		)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		mpc.client = client
-	}
+		// Get the protocol client for this connection.
+		// Subsequent calls to this will return the same client.
+		rpcClient, err := mpc.client.Client()
+		if err != nil {
+			return nil, err
+		}
 
-	// Get the protocol client for this connection.
-	// Subsequent calls to this will return the same client.
-	rpcClient, err := mpc.client.Client()
-	if err != nil {
-		return nil, "", err
-	}
+		// set the ClientProtocol connection for the given ID
+		mpc.protocol = rpcClient
 
-	// set the ClientProtocol connection for the given ID
-	mpc.connections[id] = rpcClient
+		id, err := base62.Random(10)
+		if err != nil {
+			return nil, err
+		}
+
+		mpc.id = id
+		mpc.name = pluginRunner.Name
+	}
+	mpc.connectionCount += 1
 
 	c.logger.Debug("end PluginCatalog.getPluginClient")
-	return rpcClient, id, nil
+	return mpc, nil
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
@@ -227,13 +274,13 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
-	v5Client, id, err := c.getPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	v5Client, err := c.getPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		v5Client.Close()
 		// TODO(JM): if we wrap the go-plugin ClientProtocol then could we
 		// move this to our own Close() implementation?
-		c.removeMultiplexedClient(ctx, plugin.Name, id)
+		// c.removeMultiplexedClient(ctx, plugin.Name, id)
 		return nil
 	}
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))

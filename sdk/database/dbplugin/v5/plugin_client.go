@@ -28,7 +28,7 @@ var PluginSets = map[int]plugin.PluginSet{
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	rpcClient, id, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
+	rpcClient, err := sys.NewPluginClient(ctx, pluginRunner, logger, isMetadataMode)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		Database: db,
-		id:       id,
+		id:       rpcClient.ID(),
 	}, nil
 }
