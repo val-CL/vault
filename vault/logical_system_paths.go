@@ -490,11 +490,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
 		},
 		{
-			Pattern: "version-history$",
+			Pattern: "version-history/$",
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleVersionHistoryRead,
-					Summary: "Returns map of historical version change entries",
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleVersionHistoryList,
+					Summary:  "Returns map of historical version change entries",
 				},
 			},
 
@@ -1371,10 +1371,10 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "in-flight-req",
-		Operations: map[logical.Operation]framework.OperationHandler {
+		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.handleInFlightRequestData,
-				Summary: strings.TrimSpace(sysHelp["in-flight-req"][0]),
+				Callback:    b.handleInFlightRequestData,
+				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
 			},
 		},
