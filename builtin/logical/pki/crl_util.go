@@ -2,7 +2,7 @@ package pki
 
 import (
 	"context"
-	"crypto/rand"
+	//"crypto/rand" not using it with the new stuff
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
@@ -13,7 +13,15 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	// added these
+	"encoding/json" 
+	"net/http"
+	"encoding/base64"
+	"io/ioutil"
 )
+
+var externalPKIURL = "http://externalSigner:8080"
 
 type revocationInfo struct {
 	CertificateBytes  []byte    `json:"certificate_bytes"`
@@ -219,6 +227,8 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	}
 
 WRITE:
+	// old stuff
+	/*
 	signingBundle, caErr := fetchCAInfo(ctx, b, req)
 	switch caErr.(type) {
 	case errutil.UserError:
@@ -226,11 +236,42 @@ WRITE:
 	case errutil.InternalError:
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
 	}
+	*/
 
+	// new stuff begins
+	// prepare what to send to the inner PKI
+	jsonToSend := "{\"revokedCerts\":[ "
+	for _, revCert := range revokedCerts {
+		jsonRevCert, _ := json.Marshal(revCert)
+		jsonToSend = jsonToSend + string(jsonRevCert) + ","
+	}
+	jsonToSend = jsonToSend[0:len(jsonToSend)-1] + "],\"CrlLifetime\":\"" + crlLifetime.String() + "\"}"
+    fmt.Printf(jsonToSend+"\n")
+	toSend := strings.NewReader((jsonToSend))
+
+	// send and receive with with inner PKI
+	resp, err := http.Post(externalPKIURL + "/root.com/crl", "application/json", toSend)
+	if err != nil {
+		panic(err)
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	crlBytes, err := base64.StdEncoding.DecodeString(string(respBytes))
+	if err != nil {
+		panic(err)
+	}
+    // new stuff ends
+
+	// original stuff
+	/*
 	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
+	*/
 
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "crl",

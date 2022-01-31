@@ -1,0 +1,12 @@
+version: "3.7"
+
+# By default, Docker Compose automatically creates a network specifically for the application stack
+services:
+    vault: # this name will automatically be the network alias
+        image: golang:1.17-alpine
+        command: sh -c "apk add --no-cache libcap su-exec dumb-init tzdata alpine-sdk bash && make bootstrap && go run main.go server -dev -dev-listen-address=0.0.0.0:8200 -dev-root-token-id=root"
+        ports:
+            - 8200:8200
+        working_dir: /go/src/vault
+        volumes:
+            - ./vault:/go/src/vault # bind mount -> mount the source code into the container

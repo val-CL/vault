@@ -31,7 +31,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/cryptobyte"
 	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
+
+	// added these
+	"encoding/json" 
+	"net/http"
+	"encoding/base64"
 )
+
+var caCertPath = "root-ca/root.der"
+var externalPKIURL = "http://externalSigner:8080"
 
 const rsaMinimumSecureKeySize = 2048
 
@@ -800,35 +808,49 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 		caCert := data.SigningBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
-		certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		// new stuff begins
+		// prepare what to send to the inner PKI
+		jsonCertTemplate, err := json.Marshal(certTemplate)
+		if err != nil {
+			panic(err)
+		}
+		jsonPublicKey, err := json.Marshal(result.PrivateKey.Public())
+		if err != nil {
+			panic(err)
+		}
+		jsonToSend := "{\"Template\":" + string(jsonCertTemplate) + ",\"PublicKey\":" + string(jsonPublicKey) + "}"
+		fmt.Printf(jsonToSend+"\n")
+		toSend := strings.NewReader((jsonToSend))
+
+		// send and receive with with inner PKI
+		resp, err := http.Post(externalPKIURL + "/receive", "application/json", toSend)
+		if err != nil {
+			panic(err)
+		}
+		respBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		certBytes, err = base64.StdEncoding.DecodeString(string(respBytes))
+		if err != nil {
+			panic(err)
+		}
+		//certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, valCert, result.PrivateKey.Public(), valKey)
+		//fmt.Printf("ORIGINAL:%s\n", certBytes)
+		//certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		// new stuff ends
+
+		// old stuff: certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
-		if data.Params.MaxPathLength == 0 {
-			certTemplate.MaxPathLen = 0
-			certTemplate.MaxPathLenZero = true
-		} else {
-			certTemplate.MaxPathLen = data.Params.MaxPathLength
-		}
 
-		switch data.Params.KeyType {
-		case "rsa":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
-		case "ed25519":
-			certTemplate.SignatureAlgorithm = x509.PureEd25519
-		case "ec":
-			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
+		//new stuff begins
+		certBytes, err = ioutil.ReadFile(caCertPath)
+		if err != nil {
+			panic(err)
 		}
-
-		certTemplate.AuthorityKeyId = subjKeyID
-		certTemplate.BasicConstraintsValid = true
-		certBytes, err = x509.CreateCertificate(randReader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
+		//new stuff ends
 	}
 
 	if err != nil {
@@ -1108,7 +1130,41 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
 
-	certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
+	// new stuff begins
+	// prepare what to send to the inner PKI
+	fmt.Println("didn't test this")
+	jsonCertTemplate, err := json.Marshal(certTemplate)
+	if err != nil {
+		panic(err)
+	}
+	jsonPublicKey, err := json.Marshal(result.PrivateKey.Public())
+	if err != nil {
+		panic(err)
+	}
+	jsonToSend := "{\"Template\":" + string(jsonCertTemplate) + ",\"PublicKey\":" + string(jsonPublicKey) + "}"
+	fmt.Printf(jsonToSend)
+	toSend := strings.NewReader((jsonToSend))
+
+	// send and receive with with inner PKI
+	resp, err := http.Post(externalPKIURL + "/receive", "application/json", toSend)
+	if err != nil {
+		panic(err)
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	certBytes, err = base64.StdEncoding.DecodeString(string(respBytes))
+	if err != nil {
+		panic(err)
+	}
+	//certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, valCert, result.PrivateKey.Public(), valKey)
+	//fmt.Printf("ORIGINAL:%s\n", certBytes)
+	//certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+	// new stuff ends
+
+	//old stuffcertBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
 
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
